@@ -24,8 +24,6 @@ flutter test
 flutter run -d windows   # ou android / chrome
 ```
 
-Compte démo (si seed local) : voir la doc d’équipe — ne pas committer de mots de passe.
-
 ### Backend
 
 ```bash
