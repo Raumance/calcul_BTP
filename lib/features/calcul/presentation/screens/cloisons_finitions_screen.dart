@@ -7,6 +7,7 @@ import '../../../../shared/widgets/calcul_page_scaffold.dart';
 import '../../../../shared/widgets/disclaimer_banner.dart';
 import '../../../../shared/widgets/form_fields.dart';
 import '../../../projet/presentation/providers/app_session_provider.dart';
+import '../../domain/models/carreau.dart';
 import '../../domain/moteur/cloisons_engine.dart';
 import '../../domain/moteur/finitions_engine.dart';
 
@@ -27,6 +28,7 @@ class _CloisonsFinitionsScreenState
   final _haut = TextEditingController(text: '2.5');
   double _perte = AppConstants.perteCloisons;
   String _type = 'plaque_platre';
+  TypeCarreau _typeCarreau = TypeCarreau.standard30x30;
   dynamic _result;
 
   @override
@@ -50,10 +52,10 @@ class _CloisonsFinitionsScreenState
     if (l == null || la == null || h == null) return;
     setState(() {
       if (widget.modeFinitions) {
-        _result = FinitionsEngine.surfacePeinture(
+        _result = FinitionsEngine.nombreCarreaux(
           longueur: l,
           largeur: la,
-          hauteur: h,
+          typeCarreau: _typeCarreau,
           coefficientPerte: _perte,
         );
       } else {
@@ -91,6 +93,24 @@ class _CloisonsFinitionsScreenState
               onChanged: (v) {
                 if (v == null) return;
                 setState(() => _type = v);
+                _calculer();
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (widget.modeFinitions) ...[
+            DropdownButtonFormField<TypeCarreau>(
+              value: _typeCarreau,
+              decoration: const InputDecoration(
+                labelText: 'Type de carreau',
+                border: OutlineInputBorder(),
+              ),
+              items: TypeCarreau.defaults
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c.libelle)))
+                  .toList(),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _typeCarreau = v);
                 _calculer();
               },
             ),

@@ -73,9 +73,12 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   Future<void> _pick() async {
+    // Optimisation : réduction de la résolution et compression qualité
+    // pour accélérer l'envoi réseau vers l'IA sans perte de précision métier.
     final x = await _picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 2048,
+      maxWidth: 1600,
+      imageQuality: 80,
     );
     if (x == null) return;
     final file = File(x.path);

@@ -7,6 +7,9 @@ import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/disclaimer_banner.dart';
 import '../../../../shared/widgets/form_fields.dart';
 import '../../../projet/presentation/providers/app_session_provider.dart';
+import '../../domain/models/bloc.dart';
+import '../../domain/models/ciment.dart';
+import '../../domain/models/ferraillage.dart';
 import '../../domain/models/ratio_ferraillage.dart';
 import '../../domain/moteur/gros_oeuvre_engine.dart';
 
@@ -30,11 +33,32 @@ class _GrosOeuvreScreenState extends ConsumerState<GrosOeuvreScreen>
   double _perteBeton = AppConstants.perteBeton;
   double _perteParpaing = AppConstants.perteParpaing;
   RatioFerraillage _ratio = RatioFerraillage.dalle;
+  DosageBeton _dosageBeton = DosageBeton.standard;
+  TypeCiment _typeCiment = TypeCiment.cpj325;
+  SacCiment _sacCiment = SacCiment.sac50;
+  TypeParpaing _typeParpaing = TypeParpaing.parpaing50x20x20;
+  TypeBrique _typeBrique = TypeBrique.standard27x13x7;
+  double _dosageMortier = 250.0;
+  TypeCiment _typeCimentMortier = TypeCiment.cpj325;
+  SacCiment _sacCimentMortier = SacCiment.sac50;
+  TypeAcier _typeAcier = TypeAcier.feE400;
+  SectionType _sectionType = SectionType.carre;
+  double _longueurPoteau = 3.0;
+  double _largeurPoteau = 0.30;
+  double _hauteurPoteau = 0.30;
+  double _diametreEtrier = 8;
+  double _pasEtrier = 0.20;
+  double _longueurBarre = 12.0;
 
   dynamic _beton;
   dynamic _parpaings;
   dynamic _mortier;
+  dynamic _mortierCiment;
   dynamic _acier;
+  dynamic _acierDetail;
+  dynamic _ciment;
+  dynamic _briques;
+  dynamic _acierDetail;
 
   @override
   void initState() {
@@ -72,16 +96,62 @@ class _GrosOeuvreScreenState extends ConsumerState<GrosOeuvreScreen>
         _acier = GrosOeuvreEngine.quantiteAcier(
           volumeBeton: _beton.valeurPrincipale,
           ratio: _ratio,
+          typeAcier: _typeAcier,
+          sectionType: _sectionType,
+          longueurPoteau: _longueurPoteau,
+          largeurPoteau: _largeurPoteau,
+          hauteurPoteau: _hauteurPoteau,
+          diametreEtrierMm: _diametreEtrier,
+          pasEtrier: _pasEtrier,
+          longueurTige: _longueurBarre,
+        );
+        _acierDetail = _acier;
+        _ciment = GrosOeuvreEngine.quantiteCiment(
+          volumeBeton: _beton.valeurPrincipale,
+          dosage: _dosageBeton,
+          typeCiment: _typeCiment,
+          sacCiment: _sacCiment,
         );
       }
       if (lm != null && hm != null) {
         _parpaings = GrosOeuvreEngine.nombreParpaings(
           longueurMur: lm,
           hauteurMur: hm,
+          typeParpaing: _typeParpaing,
           coefficientPerte: _perteParpaing,
         );
         _mortier = GrosOeuvreEngine.volumeMortier(
           nombreParpaings: _parpaings.valeurPrincipale,
+          typeParpaing: _typeParpaing,
+        );
+        if (_mortier != null) {
+          _mortierCiment = GrosOeuvreEngine.quantiteCimentMortier(
+            volumeMortier: _mortier.valeurPrincipale,
+            dosageKgM3: _dosageMortier,
+            typeCiment: _typeCimentMortier,
+            sacCiment: _sacCimentMortier,
+          );
+        }
+        _briques = GrosOeuvreEngine.nombreBriques(
+          longueurMur: lm,
+          hauteurMur: hm,
+          typeBrique: _typeBrique,
+          coefficientPerte: _perteParpaing,
+        );
+        _acier = GrosOeuvreEngine.quantiteAcier(
+          volumeBeton: _volumeBeton,
+          ratio: _ratioFerraillage,
+        );
+        _acierDetail = GrosOeuvreEngine.quantiteAcierDetail(
+          volumeBeton: _volumeBeton,
+          ratio: _ratioFerraillage,
+          typeAcier: _typeAcier,
+          sectionType: _sectionType,
+          longueurPoteau: _longueurPoteau,
+          largeurPoteau: _largeurPoteau,
+          hauteurPoteau: _hauteurPoteau,
+          diametreEtrierMm: _diametreEtrier,
+          pasEtrier: _pasEtrier,
         );
       }
     });
@@ -137,6 +207,54 @@ class _GrosOeuvreScreenState extends ConsumerState<GrosOeuvreScreen>
         const SizedBox(height: 12),
         NumberField(label: 'Épaisseur', controller: _epais, suffix: 'm', onChanged: (_) => _recalculer()),
         const SizedBox(height: 12),
+        DropdownButtonFormField<DosageBeton>(
+          value: _dosageBeton,
+          decoration: const InputDecoration(
+            labelText: 'Dosage béton',
+            border: OutlineInputBorder(),
+          ),
+          items: DosageBeton.defaults
+              .map((d) => DropdownMenuItem(value: d, child: Text(d.libelle)))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _dosageBeton = v);
+            _recalculer();
+          },
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<TypeCiment>(
+          value: _typeCiment,
+          decoration: const InputDecoration(
+            labelText: 'Type de ciment',
+            border: OutlineInputBorder(),
+          ),
+          items: TypeCiment.defaults
+              .map((c) => DropdownMenuItem(value: c, child: Text(c.libelle)))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _typeCiment = v);
+            _recalculer();
+          },
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<SacCiment>(
+          value: _sacCiment,
+          decoration: const InputDecoration(
+            labelText: 'Poids sac ciment',
+            border: OutlineInputBorder(),
+          ),
+          items: SacCiment.defaults
+              .map((s) => DropdownMenuItem(value: s, child: Text(s.libelle)))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _sacCiment = v);
+            _recalculer();
+          },
+        ),
+        const SizedBox(height: 12),
         PerteSlider(
           value: _perteBeton,
           min: 0.01,
@@ -154,6 +272,15 @@ class _GrosOeuvreScreenState extends ConsumerState<GrosOeuvreScreen>
             referenceNormative: _beton.referenceNormative,
             onAddToDevis: () => _add(_beton, 'gros_oeuvre'),
           ),
+        const SizedBox(height: 12),
+        if (_ciment != null)
+          ResultCard(
+            valeur: _ciment.valeurPrincipale,
+            unite: _ciment.unite,
+            designation: _ciment.designation,
+            referenceNormative: _ciment.referenceNormative,
+            onAddToDevis: () => _add(_ciment, 'gros_oeuvre'),
+          ),
         const SizedBox(height: 16),
         const DisclaimerBanner(),
       ],
@@ -167,6 +294,82 @@ class _GrosOeuvreScreenState extends ConsumerState<GrosOeuvreScreen>
         NumberField(label: 'Longueur du mur', controller: _longMur, suffix: 'm', onChanged: (_) => _recalculer()),
         const SizedBox(height: 12),
         NumberField(label: 'Hauteur du mur', controller: _hautMur, suffix: 'm', onChanged: (_) => _recalculer()),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<TypeParpaing>(
+          value: _typeParpaing,
+          decoration: const InputDecoration(
+            labelText: 'Type de parpaing',
+            border: OutlineInputBorder(),
+          ),
+          items: TypeParpaing.defaults
+              .map((p) => DropdownMenuItem(value: p, child: Text(p.libelle)))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _typeParpaing = v);
+            _recalculer();
+          },
+        ),
+        const SizedBox(height: 12),
+        NumberField(
+          label: 'Dosage ciment (mortier)',
+          controller: TextEditingController(text: _dosageMortier.toString()),
+          suffix: 'kg/m³',
+          onChanged: (value) {
+            final parsed = double.tryParse(value.replaceAll(',', '.'));
+            if (parsed != null && parsed > 0) {
+              setState(() => _dosageMortier = parsed);
+              _recalculer();
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<TypeCiment>(
+          value: _typeCimentMortier,
+          decoration: const InputDecoration(
+            labelText: 'Type de ciment (mortier)',
+            border: OutlineInputBorder(),
+          ),
+          items: TypeCiment.defaults
+              .map((c) => DropdownMenuItem(value: c, child: Text(c.libelle)))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _typeCimentMortier = v);
+            _recalculer();
+          },
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<SacCiment>(
+          value: _sacCimentMortier,
+          decoration: const InputDecoration(
+            labelText: 'Poids sac ciment (mortier)',
+            border: OutlineInputBorder(),
+          ),
+          items: SacCiment.defaults
+              .map((s) => DropdownMenuItem(value: s, child: Text(s.libelle)))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _sacCimentMortier = v);
+            _recalculer();
+          },
+        ),
+        DropdownButtonFormField<TypeBrique>(
+          value: _typeBrique,
+          decoration: const InputDecoration(
+            labelText: 'Type de brique',
+            border: OutlineInputBorder(),
+          ),
+          items: TypeBrique.defaults
+              .map((b) => DropdownMenuItem(value: b, child: Text(b.libelle)))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _typeBrique = v);
+            _recalculer();
+          },
+        ),
         const SizedBox(height: 12),
         PerteSlider(
           value: _perteParpaing,
@@ -187,7 +390,7 @@ class _GrosOeuvreScreenState extends ConsumerState<GrosOeuvreScreen>
           ),
           const SizedBox(height: 12),
         ],
-        if (_mortier != null)
+        if (_mortier != null) ...[
           ResultCard(
             valeur: _mortier.valeurPrincipale,
             unite: _mortier.unite,
@@ -195,6 +398,18 @@ class _GrosOeuvreScreenState extends ConsumerState<GrosOeuvreScreen>
             referenceNormative: _mortier.referenceNormative,
             onAddToDevis: () => _add(_mortier, 'gros_oeuvre'),
           ),
+          const SizedBox(height: 12),
+        ],
+        if (_briques != null) ...[
+          ResultCard(
+            valeur: _briques.valeurPrincipale,
+            unite: _briques.unite,
+            designation: _briques.designation,
+            referenceNormative: _briques.referenceNormative,
+            onAddToDevis: () => _add(_briques, 'gros_oeuvre'),
+          ),
+          const SizedBox(height: 12),
+        ],
         const SizedBox(height: 16),
         const DisclaimerBanner(),
       ],
@@ -219,6 +434,117 @@ class _GrosOeuvreScreenState extends ConsumerState<GrosOeuvreScreen>
             },
           ),
         ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<TypeAcier>(
+          value: _typeAcier,
+          decoration: const InputDecoration(
+            labelText: 'Type d\'acier',
+            border: OutlineInputBorder(),
+          ),
+          items: TypeAcier.defaults
+              .map((a) => DropdownMenuItem(value: a, child: Text(a.libelle)))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _typeAcier = v);
+            _recalculer();
+          },
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<SectionType>(
+          value: _sectionType,
+          decoration: const InputDecoration(
+            labelText: 'Section poteau/poutre',
+            border: OutlineInputBorder(),
+          ),
+          items: SectionType.values
+              .map((s) => DropdownMenuItem(value: s, child: Text(s.libelle)))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _sectionType = v);
+            _recalculer();
+          },
+        ),
+        const SizedBox(height: 12),
+        NumberField(
+          label: 'Longueur poteau/poutre',
+          controller: TextEditingController(text: _longueurPoteau.toString()),
+          suffix: 'm',
+          onChanged: (value) {
+            final parsed = Validators.parsePositive(value);
+            if (parsed != null) {
+              setState(() => _longueurPoteau = parsed);
+              _recalculer();
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        NumberField(
+          label: 'Largeur section',
+          controller: TextEditingController(text: _largeurPoteau.toString()),
+          suffix: 'm',
+          onChanged: (value) {
+            final parsed = Validators.parsePositive(value);
+            if (parsed != null) {
+              setState(() => _largeurPoteau = parsed);
+              _recalculer();
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        NumberField(
+          label: 'Hauteur section',
+          controller: TextEditingController(text: _hauteurPoteau.toString()),
+          suffix: 'm',
+          onChanged: (value) {
+            final parsed = Validators.parsePositive(value);
+            if (parsed != null) {
+              setState(() => _hauteurPoteau = parsed);
+              _recalculer();
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        NumberField(
+          label: 'Diamètre étrier',
+          controller: TextEditingController(text: _diametreEtrier.toString()),
+          suffix: 'mm',
+          onChanged: (value) {
+            final parsed = Validators.parsePositive(value);
+            if (parsed != null) {
+              setState(() => _diametreEtrier = parsed);
+              _recalculer();
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        NumberField(
+          label: 'Pas étrier',
+          controller: TextEditingController(text: _pasEtrier.toString()),
+          suffix: 'm',
+          onChanged: (value) {
+            final parsed = Validators.parsePositive(value);
+            if (parsed != null) {
+              setState(() => _pasEtrier = parsed);
+              _recalculer();
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        NumberField(
+          label: 'Longueur barre acier',
+          controller: TextEditingController(text: _longueurBarre.toString()),
+          suffix: 'm',
+          onChanged: (value) {
+            final parsed = Validators.parsePositive(value);
+            if (parsed != null) {
+              setState(() => _longueurBarre = parsed);
+              _recalculer();
+            }
+          },
+        ),
+        const SizedBox(height: 12),
         if (_acier != null)
           ResultCard(
             valeur: _acier.valeurPrincipale,

@@ -81,6 +81,8 @@ DATABASES = {
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
     )
 }
+# Optimisation : Garder la connexion ouverte 60 secondes pour éviter les reconnexions coûteuses
+DATABASES["default"]["CONN_MAX_AGE"] = 60
 
 AUTH_USER_MODEL = "calcul_btp.Utilisateur"
 

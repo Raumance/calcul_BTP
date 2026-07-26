@@ -1,6 +1,7 @@
 import 'package:calcul_projet/core/constants/app_constants.dart';
 import 'package:calcul_projet/core/constants/normative_refs.dart';
 import '../models/calcul_result.dart';
+import '../models/carreau.dart';
 
 class Ouverture {
   const Ouverture({required this.largeur, required this.hauteur});
@@ -92,6 +93,38 @@ class FinitionsEngine {
         'coefficient_perte': coefficientPerte,
       },
       referenceNormative: NormativeRefs.dtuCarrelage,
+      avertissement: AppConstants.disclaimerText,
+    );
+  }
+
+  static CalculResult nombreCarreaux({
+    required double longueur,
+    required double largeur,
+    required TypeCarreau typeCarreau,
+    double coefficientPerte = AppConstants.perteCarrelage,
+  }) {
+    if (longueur <= 0 || largeur <= 0) {
+      throw ArgumentError('Les dimensions doivent être strictement positives.');
+    }
+    _assertPerte(coefficientPerte);
+    final surfaceNette = longueur * largeur;
+    final surfaceCarreau = typeCarreau.surface;
+    final nbNet = surfaceNette / surfaceCarreau;
+    final nbAvecPerte = (nbNet * (1 + coefficientPerte)).ceil();
+    return CalculResult(
+      valeurPrincipale: nbAvecPerte.toDouble(),
+      unite: 'unités',
+      designation: 'Carreaux — ${typeCarreau.dimensions}',
+      details: {
+        'surface_nette': surfaceNette,
+        'surface_carreau': surfaceCarreau,
+        'type_carreau': typeCarreau.libelle,
+        'categorie_carreau': typeCarreau.categorie,
+        'dimensions_carreau': typeCarreau.dimensions,
+        'nb_net': nbNet,
+        'coefficient_perte': coefficientPerte,
+      },
+      referenceNormative: '${NormativeRefs.dtuCarrelage}, ${NormativeRefs.nfC15100}',
       avertissement: AppConstants.disclaimerText,
     );
   }

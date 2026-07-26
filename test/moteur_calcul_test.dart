@@ -1,8 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:calcul_projet/features/calcul/domain/models/bloc.dart';
+import 'package:calcul_projet/features/calcul/domain/models/ciment.dart';
+import 'package:calcul_projet/features/calcul/domain/models/carreau.dart';
 import 'package:calcul_projet/features/calcul/domain/models/ratio_ferraillage.dart';
 import 'package:calcul_projet/features/calcul/domain/models/type_sol.dart';
 import 'package:calcul_projet/features/calcul/domain/moteur/electricite_engine.dart';
+import 'package:calcul_projet/features/calcul/domain/moteur/finitions_engine.dart';
 import 'package:calcul_projet/features/calcul/domain/moteur/gros_oeuvre_engine.dart';
 import 'package:calcul_projet/features/calcul/domain/moteur/terrassement_engine.dart';
 import 'package:calcul_projet/features/devis/domain/models/devis.dart';
@@ -39,6 +43,58 @@ void main() {
         ratio: RatioFerraillage.dalle,
       );
       expect(r.valeurPrincipale, 160);
+    });
+
+    test('nombre parpaings Gabon 40x20x20', () {
+      final r = GrosOeuvreEngine.nombreParpaings(
+        longueurMur: 10,
+        hauteurMur: 2.5,
+        typeParpaing: TypeParpaing.parpaing40x20x20,
+        coefficientPerte: 0.05,
+      );
+      expect(r.valeurPrincipale, greaterThan(0));
+      expect(r.details['type_parpaing'], 'Parpaing Gabon 40×20×20');
+    });
+
+    test('nombre briques standard 27x13x7', () {
+      final r = GrosOeuvreEngine.nombreBriques(
+        longueurMur: 10,
+        hauteurMur: 2.5,
+        typeBrique: TypeBrique.standard27x13x7,
+        coefficientPerte: 0.05,
+      );
+      expect(r.valeurPrincipale, greaterThan(0));
+      expect(r.details['type_brique'], 'Brique standard 27×13×7');
+    });
+  });
+
+  group('FinitionsEngine', () {
+    test('nombre carreaux 30x30', () {
+      final r = FinitionsEngine.nombreCarreaux(
+        longueur: 5,
+        largeur: 4,
+        typeCarreau: TypeCarreau.standard30x30,
+        coefficientPerte: 0.10,
+      );
+      expect(r.valeurPrincipale, greaterThan(0));
+      expect(r.details['type_carreau'], 'Carreau standard 30×30');
+    });
+  });
+
+  group('Mortier et ciment', () {
+    test('quantite ciment pour mortier de parpaings', () {
+      final volumeMortier = GrosOeuvreEngine.volumeMortier(
+        nombreParpaings: 100,
+        typeParpaing: TypeParpaing.parpaing40x20x10,
+      );
+      final c = GrosOeuvreEngine.quantiteCimentMortier(
+        volumeMortier: volumeMortier.valeurPrincipale,
+        dosageKgM3: 250,
+        typeCiment: TypeCiment.cpj325,
+        sacCiment: SacCiment.sac50,
+      );
+      expect(c.valeurPrincipale, greaterThanOrEqualTo(0));
+      expect(c.details['volume_mortier_m3'], isNotNull);
     });
   });
 

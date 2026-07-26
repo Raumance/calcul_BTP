@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-/// Persistance offline JSON (projets, devis, calculs, plans, journal sync).
+/// Persistance offline JSON optimisée (projets, devis, calculs, plans, journal sync).
 class LocalStore {
   LocalStore({this.inMemory = false});
 
@@ -12,6 +13,7 @@ class LocalStore {
   final bool inMemory;
 
   File? _file;
+  Timer? _debounceTimer;
   Map<String, dynamic> _data = {
     'projets': <dynamic>[],
     'devis': <dynamic>[],
@@ -27,15 +29,19 @@ class LocalStore {
 
   Future<void> init() async {
     if (inMemory) return;
-    final dir = await getApplicationDocumentsDirectory();
-    _file = File(p.join(dir.path, 'btp_local_store.json'));
-    if (await _file!.exists()) {
-      final raw = await _file!.readAsString();
-      if (raw.trim().isNotEmpty) {
-        _data = jsonDecode(raw) as Map<String, dynamic>;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      _file = File(p.join(dir.path, 'btp_local_store.json'));
+      if (await _file!.exists()) {
+        final raw = await _file!.readAsString();
+        if (raw.trim().isNotEmpty) {
+          _data = jsonDecode(raw) as Map<String, dynamic>;
+        }
+      } else {
+        await _persistNow();
       }
-    } else {
-      await _persist();
+    } catch (e) {
+      print('LocalStore: Erreur lors de l\'initialisation : $e');
     }
   }
 
@@ -45,7 +51,7 @@ class LocalStore {
   Future<void> setMeta(Map<String, dynamic> patch) async {
     final m = meta..addAll(patch);
     _data['meta'] = m;
-    await _persist();
+    _schedulePersist();
   }
 
   List<Map<String, dynamic>> _list(String key) {
@@ -53,9 +59,9 @@ class LocalStore {
     return raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  Future<void> _setList(String key, List<Map<String, dynamic>> items) async {
+  void _updateList(String key, List<Map<String, dynamic>> items) {
     _data[key] = items;
-    await _persist();
+    _schedulePersist();
   }
 
   Future<List<Map<String, dynamic>>> getProjets() async => _list('projets');
@@ -68,7 +74,7 @@ class LocalStore {
     } else {
       items.add(projet);
     }
-    await _setList('projets', items);
+    _updateList('projets', items);
     await enqueueJournal(
       entiteType: 'Projet',
       entiteId: projet['id'] as String,
@@ -87,7 +93,7 @@ class LocalStore {
     } else {
       items.add(devis);
     }
-    await _setList('devis', items);
+    _updateList('devis', items);
     await enqueueJournal(
       entiteType: 'Devis',
       entiteId: devis['id'] as String,
@@ -110,7 +116,7 @@ class LocalStore {
     } else {
       items.add(calcul);
     }
-    await _setList('calculs', items);
+    _updateList('calculs', items);
     await enqueueJournal(
       entiteType: 'Calcul',
       entiteId: calcul['id'] as String,
@@ -133,7 +139,7 @@ class LocalStore {
     } else {
       items.add(plan);
     }
-    await _setList('plans', items);
+    _updateList('plans', items);
     await enqueueJournal(
       entiteType: 'Plan',
       entiteId: plan['id'] as String,
@@ -158,7 +164,7 @@ class LocalStore {
       'est_synchro': false,
       'created_at': DateTime.now().toUtc().toIso8601String(),
     });
-    await _setList('journal', journal);
+    _updateList('journal', journal);
   }
 
   Future<List<Map<String, dynamic>>> pendingJournal() async {
@@ -170,12 +176,25 @@ class LocalStore {
     for (final e in journal) {
       if (e['id'] == id) e['est_synchro'] = true;
     }
-    await _setList('journal', journal);
+    _updateList('journal', journal);
   }
 
-  Future<void> _persist() async {
+  /// Planifie une sauvegarde différée pour grouper les écritures disque (debouncing).
+  void _schedulePersist() {
+    if (inMemory) return;
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 200), _persistNow);
+  }
+
+  /// Sauvegarde immédiate des données sur le disque en format compact.
+  Future<void> _persistNow() async {
     final file = _file;
     if (file == null) return;
-    await file.writeAsString(const JsonEncoder.withIndent('  ').convert(_data));
+    try {
+      final raw = jsonEncode(_data);
+      await file.writeAsString(raw);
+    } catch (e) {
+      print('LocalStore: Erreur de sauvegarde : $e');
+    }
   }
 }

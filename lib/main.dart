@@ -4,17 +4,32 @@ import 'package:flutter/services.dart';
 import 'app.dart';
 import 'shared/database/local_store.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
+void main() async {
+  // 1. Initialisation des bindings Flutter le plus tôt possible
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  
+  // 2. Préserver le splash screen natif pendant l'initialisation
+  // ignore: deprecated_member_use
+  binding.deferFirstFrame();
 
-  final store = LocalStore();
-  await store.init();
+  try {
+    // 3. Configurations système en parallèle
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
 
-  runApp(CalculBtpApp(store: store));
+    // 4. Initialisation du stockage local
+    final store = LocalStore();
+    await store.init();
+
+    // 5. Lancement de l'application
+    runApp(CalculBtpApp(store: store));
+  } finally {
+    // 6. Autoriser le premier rendu
+    // ignore: deprecated_member_use
+    binding.allowFirstFrame();
+  }
 }
